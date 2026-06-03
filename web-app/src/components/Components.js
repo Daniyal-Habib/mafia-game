@@ -10,10 +10,8 @@ export function createGameButton(label, variant = 'default', onClick = null, opt
   if (width) btn.style.width = width;
 
   btn.innerHTML = `
-    <div class="game-btn-border"></div>
     <div class="game-btn-inner">
       <div class="game-btn-bg ${variant}"></div>
-      <div class="game-btn-highlight"></div>
       <span class="game-btn-label">${label}</span>
     </div>
   `;

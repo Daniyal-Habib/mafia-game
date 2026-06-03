@@ -139,7 +139,7 @@ html, body {
   color: #fff;
 }
 
-/* ---------- CutCorner Game Button ---------- */
+/* ---------- Modern Glass Game Button ---------- */
 .game-btn {
   position: relative;
   display: flex;
@@ -150,13 +150,15 @@ html, body {
   border: none !important;
   cursor: pointer;
   background: transparent !important;
-  box-shadow: none !important;
   outline: none !important;
   padding: 0;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  -webkit-tap-highlight-color: transparent;
-  border-radius: 999px;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s;
+}
+.game-btn:active {
+  transform: scale(0.96);
+  filter: brightness(0.8);
 }
 .game-btn-inner {
   position: relative;
@@ -165,64 +167,47 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  overflow: hidden;
-  transition: transform 0.1s ease;
-}
-.game-btn:active .game-btn-inner {
-  transform: scale(0.98);
+  border-radius: 16px;
 }
 .game-btn-bg {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: 16px;
+  z-index: 0;
+  transition: opacity 0.2s;
 }
-.game-btn-bg.default { background: linear-gradient(to bottom, #cc1a0a, rgba(204,26,10,0.6)); }
-.game-btn-bg.blue { background: linear-gradient(to bottom, #1a4d99, rgba(26,77,153,0.6)); }
-.game-btn-bg.green { background: linear-gradient(to bottom, #336633, rgba(51,102,51,0.6)); }
-.game-btn-bg.livegreen { background: linear-gradient(to bottom, #34c759, rgba(52,199,89,0.6)); }
-.game-btn-bg.purple { background: linear-gradient(to bottom, #6e2fa0, rgba(110,47,160,0.6)); }
-.game-btn:active .game-btn-bg {
-  background: linear-gradient(to bottom, #333, #000) !important;
+.game-btn-bg.default { 
+  background: linear-gradient(135deg, #cc1a0a 0%, #800000 100%);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  box-shadow: 0 4px 15px rgba(204, 26, 10, 0.3);
 }
-/* Gold border */
-.game-btn-border {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ffe680, #cc9933, #ffe680);
-  z-index: -1;
-  padding: 3px;
+.game-btn-bg.blue,
+.game-btn-bg.green,
+.game-btn-bg.purple {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-.game-btn-border::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  background: inherit;
-  border-radius: 999px;
-}
-/* Inner highlight */
-.game-btn-highlight {
-  position: absolute;
-  inset: 3px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.3);
-  pointer-events: none;
+.game-btn-bg.livegreen {
+  background: linear-gradient(135deg, #34c759 0%, #248a3d 100%);
+  border: 1px solid rgba(100, 255, 100, 0.3);
+  box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
 }
 .game-btn-label {
   position: relative;
   z-index: 2;
   font-family: 'Inter', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-gold);
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 1px;
   text-transform: uppercase;
   pointer-events: none;
 }
 .game-btn.small { height: 48px; }
-.game-btn.small .game-btn-label { font-size: 16px; }
+.game-btn.small .game-btn-label { font-size: 14px; }
 .game-btn[disabled] { opacity: 0.5; pointer-events: none; }
 
 /* ---------- Player Avatar ---------- */
@@ -282,23 +267,16 @@ html, body {
   border: 1px solid rgba(255,255,255,0.1);
 }
 .player-select-card.selected .card-bg {
-  background: linear-gradient(to bottom, rgba(204,26,10,0.8), rgba(128,0,0,0.8));
-  box-shadow: 0 2px 8px rgba(255,0,0,0.4);
-}
-.player-select-card.selected::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  border: 2px solid #ffe680;
-  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(204,26,10,0.6), rgba(128,0,0,0.6));
+  box-shadow: 0 4px 12px rgba(255,0,0,0.2);
+  border: 1px solid rgba(255,100,100,0.4);
 }
 .player-select-card .avatar {
   border: 2px solid transparent;
   transition: border-color 0.2s;
 }
 .player-select-card.selected .avatar {
-  border-color: #ffcc00;
+  border-color: #ff3b30;
 }
 .player-select-card .player-name {
   font-size: 12px;
@@ -318,7 +296,7 @@ html, body {
   top: 4px; right: 4px;
   width: 20px; height: 20px;
   border-radius: 50%;
-  background: #cc9933;
+  background: #ff3b30;
   display: flex;
   align-items: center;
   justify-content: center;
