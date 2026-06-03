@@ -66,6 +66,11 @@ export function MultiplayerLobbyView() {
             <div class="mp-mode-name">Words Imposter</div>
             <div class="mp-mode-desc">Spot the fake</div>
           </button>
+          <button class="mp-mode-card" data-mode="uno">
+            <div class="mp-mode-icon">🃏</div>
+            <div class="mp-mode-name">UNO</div>
+            <div class="mp-mode-desc">Classic card game</div>
+          </button>
         </div>
       </div>
     `;

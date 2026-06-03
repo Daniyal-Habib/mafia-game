@@ -25,6 +25,8 @@ import { MultiplayerWordRevealView } from './views/MultiplayerWordRevealView.js'
 import { MultiplayerGameplayView } from './views/MultiplayerGameplayView.js';
 import { MultiplayerWordsVotingView } from './views/MultiplayerWordsVotingView.js';
 import { MultiplayerGameOverView } from './views/MultiplayerGameOverView.js';
+import { UnoGameView } from './views/UnoGameView.js';
+import { UnoGameOverView } from './views/UnoGameOverView.js';
 
 // Register Routes
 registerRoute('/', HomeView);
@@ -52,6 +54,8 @@ registerRoute('/mp-gameplay', MultiplayerGameplayView);
 registerRoute('/mp-words-voting', MultiplayerWordsVotingView);
 registerRoute('/mp-words-result', MultiplayerGameOverView);
 registerRoute('/mp-game-over', MultiplayerGameOverView);
+registerRoute('/uno-game', UnoGameView);
+registerRoute('/uno-game-over', UnoGameOverView);
 
 // Start
 document.addEventListener('DOMContentLoaded', () => {

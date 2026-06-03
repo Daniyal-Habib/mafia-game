@@ -2,7 +2,7 @@
 import { navigate, goBack } from '../lib/router.js';
 import { createGameButton, createNavBar, createNavButton, createAvatar } from '../components/Components.js';
 import { playTap, playSuccess, playError, playLight } from '../lib/haptics.js';
-import { subscribeToRoom, hostStartMafiaGame, hostStartWordsGame, leaveRoom, updateRoomSettings, updatePlayerProfile } from '../lib/roomStore.js';
+import { subscribeToRoom, hostStartMafiaGame, hostStartWordsGame, hostStartUnoGame, leaveRoom, updateRoomSettings, updatePlayerProfile } from '../lib/roomStore.js';
 import { deviceId } from '../lib/roomStore.js';
 import { autoBalanceAllRoles, validateSetup } from '../models/GameSetup.js';
 import { wordStore } from '../models/WordStore.js';
@@ -189,13 +189,16 @@ export function MultiplayerWaitingView(data) {
     // Auto-balance roles FIRST so currentSetup is correct before validation
     renderRoleConfig(players);
 
-    // Validate and update start button
     if (startBtn) {
-      const validation = validateSetup(currentSetup, players.length);
-      startBtn.disabled = !validation.valid || players.length < 3;
+      const validation = gameMode === 'mafia' ? validateSetup(currentSetup, players.length) : { valid: true, message: '' };
+      const minPlayers = gameMode === 'uno' ? 2 : 3;
+      startBtn.disabled = !validation.valid || players.length < minPlayers;
       statusMsg.textContent = validation.valid
         ? `${players.length} players ready!`
         : validation.message;
+      if (players.length < minPlayers) {
+        statusMsg.textContent = `Need at least ${minPlayers} players`;
+      }
     }
   }
 
@@ -310,6 +313,9 @@ export function MultiplayerWaitingView(data) {
     } else if (room.status === 'words-reveal') {
       unsub();
       navigate('/mp-word-reveal', { code, room, isHost });
+    } else if (room.status === 'uno-playing') {
+      unsub();
+      navigate('/uno-game', { code, room, isHost });
     }
   });
 
@@ -331,6 +337,12 @@ export function MultiplayerWaitingView(data) {
           const room = roomSnap.val();
           room.roleCounts = currentSetup.roleCounts;
           await hostStartMafiaGame(code, room);
+        } else if (gameMode === 'uno') {
+          const { get, ref } = await import('firebase/database');
+          const { getDb } = await import('../lib/firebase.js');
+          const roomSnap = await get(ref(getDb(), `rooms/${code}`));
+          const room = roomSnap.val();
+          await hostStartUnoGame(code, room);
         } else {
           // Words mode — pick a random word
           const words = wordStore.words;

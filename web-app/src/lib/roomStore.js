@@ -3,6 +3,7 @@ import { ref, set, get, update, onValue, off, push, remove } from 'firebase/data
 import { initFirebase } from './firebase.js';
 import { assignRoles } from '../models/GameSetup.js';
 import { generateId } from './utils.js';
+import { dealHands, isPlayable, getCardEffect, getNextPlayer, serializeState } from '../models/UnoEngine.js';
 
 // Generate a random 4-letter uppercase room code
 function generateRoomCode() {
@@ -178,4 +179,237 @@ export async function updatePlayerProfile(code, newName, newAvatarBase64) {
     updates.avatar = newAvatarBase64;
   }
   await update(ref(db, `rooms/${code}/players/${deviceId}`), updates);
+}
+
+// ============ UNO GAME FUNCTIONS ============
+
+// Host starts UNO game
+export async function hostStartUnoGame(code, room) {
+  const db = initFirebase();
+  const players = Object.values(room.players);
+  const playerIds = players.map(p => p.id);
+
+  // Shuffle player order
+  const turnOrder = [...playerIds].sort(() => Math.random() - 0.5);
+
+  // Deal cards
+  const { hands, drawPile, discardPile, startCard } = dealHands(turnOrder, 7);
+
+  const unoState = serializeState({
+    drawPile,
+    discardPile,
+    hands,
+    currentTurn: turnOrder[0],
+    currentTurnIndex: 0,
+    direction: 1,
+    activeColor: startCard.color,
+    pendingWild: false,
+    turnOrder,
+    calledUno: {},
+    winner: null,
+    lastAction: null,
+  });
+
+  await update(ref(db, `rooms/${code}`), {
+    status: 'uno-playing',
+    uno: unoState,
+  });
+}
+
+// Play a card
+export async function unoPlayCard(code, cardId) {
+  const db = initFirebase();
+  const snap = await get(ref(db, `rooms/${code}/uno`));
+  if (!snap.exists()) return;
+  const uno = snap.val();
+
+  // Validate it's our turn
+  if (uno.currentTurn !== deviceId) return;
+  if (uno.pendingWild) return; // Must choose color first
+
+  // Find the card in our hand
+  const hand = uno.hands[deviceId] || [];
+  const cardIndex = hand.findIndex(c => c.id === cardId);
+  if (cardIndex === -1) return;
+
+  const card = hand[cardIndex];
+  const topCard = uno.discardPile[uno.discardPile.length - 1];
+
+  // Validate playable
+  if (!isPlayable(card, topCard, uno.activeColor)) return;
+
+  // Remove card from hand
+  const newHand = [...hand];
+  newHand.splice(cardIndex, 1);
+
+  // Add to discard
+  const newDiscard = [...uno.discardPile, card];
+
+  // Determine effect
+  const effect = getCardEffect(card);
+  const turnOrder = uno.turnOrder;
+  let direction = uno.direction;
+  let nextTurnIndex = uno.currentTurnIndex;
+  let activeColor = card.color === 'wild' ? uno.activeColor : card.color;
+  let pendingWild = false;
+  let drawUpdates = {};
+  let lastAction = { type: effect, player: deviceId, card };
+
+  if (effect === 'reverse') {
+    direction *= -1;
+    if (turnOrder.length === 2) {
+      // In 2-player, reverse acts as skip
+      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    } else {
+      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    }
+  } else if (effect === 'skip') {
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+  } else if (effect === 'draw2') {
+    const skippedIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    const skippedPlayer = turnOrder[skippedIndex];
+    // Give 2 cards to next player
+    const drawPile = [...(uno.drawPile || [])];
+    const targetHand = [...(uno.hands[skippedPlayer] || [])];
+    for (let i = 0; i < 2 && drawPile.length > 0; i++) {
+      targetHand.push(drawPile.shift());
+    }
+    drawUpdates[`hands/${skippedPlayer}`] = targetHand;
+    drawUpdates['drawPile'] = drawPile;
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    lastAction.target = skippedPlayer;
+  } else if (effect === 'wild') {
+    pendingWild = true;
+    // Don't advance turn yet — wait for color choice
+  } else if (effect === 'wild_draw4') {
+    pendingWild = true;
+    // Color + draw will happen in chooseColor
+  } else {
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+  }
+
+  // Check for win
+  let winner = null;
+  if (newHand.length === 0) {
+    winner = deviceId;
+  }
+
+  const updates = {
+    [`hands/${deviceId}`]: newHand,
+    discardPile: newDiscard,
+    direction,
+    activeColor,
+    pendingWild,
+    lastAction,
+    ...drawUpdates,
+  };
+
+  if (winner) {
+    updates.winner = winner;
+  }
+
+  if (!pendingWild) {
+    updates.currentTurnIndex = nextTurnIndex;
+    updates.currentTurn = turnOrder[nextTurnIndex];
+  }
+
+  await update(ref(db, `rooms/${code}/uno`), updates);
+}
+
+// Choose color after playing a wild card
+export async function unoChooseColor(code, color) {
+  const db = initFirebase();
+  const snap = await get(ref(db, `rooms/${code}/uno`));
+  if (!snap.exists()) return;
+  const uno = snap.val();
+
+  if (uno.currentTurn !== deviceId) return;
+  if (!uno.pendingWild) return;
+
+  const lastCard = uno.discardPile[uno.discardPile.length - 1];
+  const effect = getCardEffect(lastCard);
+  const turnOrder = uno.turnOrder;
+  let nextTurnIndex = uno.currentTurnIndex;
+  let direction = uno.direction;
+  const updates = {
+    activeColor: color,
+    pendingWild: false,
+  };
+
+  if (effect === 'wild_draw4') {
+    const targetIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    const targetPlayer = turnOrder[targetIndex];
+    const drawPile = [...(uno.drawPile || [])];
+    const targetHand = [...(uno.hands[targetPlayer] || [])];
+    for (let i = 0; i < 4 && drawPile.length > 0; i++) {
+      targetHand.push(drawPile.shift());
+    }
+    updates[`hands/${targetPlayer}`] = targetHand;
+    updates.drawPile = drawPile;
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    updates.lastAction = { type: 'wild_draw4', player: deviceId, target: targetPlayer, color };
+  } else {
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    updates.lastAction = { type: 'wild', player: deviceId, color };
+  }
+
+  // Check if player already won (hand empty from the wild play)
+  const myHand = uno.hands[deviceId] || [];
+  if (myHand.length === 0) {
+    updates.winner = deviceId;
+  }
+
+  updates.currentTurnIndex = nextTurnIndex;
+  updates.currentTurn = turnOrder[nextTurnIndex];
+
+  await update(ref(db, `rooms/${code}/uno`), updates);
+}
+
+// Draw a card from the pile
+export async function unoDrawCard(code) {
+  const db = initFirebase();
+  const snap = await get(ref(db, `rooms/${code}/uno`));
+  if (!snap.exists()) return;
+  const uno = snap.val();
+
+  if (uno.currentTurn !== deviceId) return;
+  if (uno.pendingWild) return;
+
+  const drawPile = [...(uno.drawPile || [])];
+  const hand = [...(uno.hands[deviceId] || [])];
+
+  if (drawPile.length === 0) {
+    // Reshuffle discard pile into draw pile (keep top card)
+    const discard = [...(uno.discardPile || [])];
+    const topCard = discard.pop();
+    const reshuffled = discard.sort(() => Math.random() - 0.5);
+    drawPile.push(...reshuffled);
+    await update(ref(db, `rooms/${code}/uno`), {
+      drawPile,
+      discardPile: [topCard],
+    });
+  }
+
+  if (drawPile.length > 0) {
+    const drawnCard = drawPile.shift();
+    hand.push(drawnCard);
+
+    // After drawing, advance to next turn
+    const turnOrder = uno.turnOrder;
+    const nextIndex = getNextPlayer(turnOrder, uno.currentTurnIndex, uno.direction, 0);
+
+    await update(ref(db, `rooms/${code}/uno`), {
+      drawPile,
+      [`hands/${deviceId}`]: hand,
+      currentTurnIndex: nextIndex,
+      currentTurn: turnOrder[nextIndex],
+      lastAction: { type: 'draw', player: deviceId },
+    });
+  }
+}
+
+// Call UNO
+export async function unoCallUno(code) {
+  const db = initFirebase();
+  await update(ref(db, `rooms/${code}/uno/calledUno`), { [deviceId]: true });
 }
