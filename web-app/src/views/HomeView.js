@@ -64,7 +64,7 @@ export function HomeView() {
   buttons.appendChild(wordsBtn);
 
   // Online Multiplayer
-  const multiplayerBtn = createGameButton('🌐 ONLINE MULTIPLAYER', 'purple', () => {
+  const multiplayerBtn = createGameButton('ONLINE MULTIPLAYER', 'purple', () => {
     playTap();
     navigate('/multiplayer');
   });
