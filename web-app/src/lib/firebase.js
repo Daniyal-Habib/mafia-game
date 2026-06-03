@@ -1,6 +1,7 @@
 // Firebase — Initialize app and export database reference
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC3AnLOYPB7TN61yJsNt4DGnBfGlZ-gjAs",
@@ -15,12 +16,16 @@ const firebaseConfig = {
 
 let app = null;
 let db = null;
+export let auth = null;
+export let googleProvider = null;
 
 export function initFirebase() {
   if (app) return db;
   try {
     app = initializeApp(firebaseConfig);
     db = getDatabase(app);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
     return db;
   } catch (e) {
     console.error('[Firebase] Init failed:', e);
@@ -31,5 +36,26 @@ export function initFirebase() {
 export function getDb() {
   if (!db) return initFirebase();
   return db;
+}
+
+export async function signInWithGoogle() {
+  if (!auth) initFirebase();
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error) {
+    console.error('[Firebase] Google sign-in failed:', error);
+    throw error;
+  }
+}
+
+export async function logOut() {
+  if (!auth) return;
+  await signOut(auth);
+}
+
+export function onUserChange(callback) {
+  if (!auth) initFirebase();
+  return onAuthStateChanged(auth, callback);
 }
 

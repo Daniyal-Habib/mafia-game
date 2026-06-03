@@ -32,3 +32,9 @@ class GlobalSettingsStore {
 }
 
 export const globalSettings = new GlobalSettingsStore();
+
+window.addEventListener('cloudSyncComplete', () => {
+  globalSettings._settings = loadSettings();
+  setHapticsEnabled(globalSettings._settings.hapticsEnabled);
+  globalSettings._notify();
+});

@@ -73,3 +73,8 @@ class PlayerStore {
 }
 
 export const playerStore = new PlayerStore();
+
+window.addEventListener('cloudSyncComplete', () => {
+  playerStore.players = loadPlayers();
+  playerStore._notify();
+});

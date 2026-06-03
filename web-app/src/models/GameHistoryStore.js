@@ -36,3 +36,8 @@ class GameHistoryStoreClass {
 }
 
 export const historyStore = new GameHistoryStoreClass();
+
+window.addEventListener('cloudSyncComplete', () => {
+  historyStore.games = loadHistory();
+  historyStore._notify();
+});

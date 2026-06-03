@@ -3,6 +3,7 @@ import { navigate, goBack } from '../lib/router.js';
 import { globalSettings } from '../models/GlobalSettings.js';
 import { createNavBar, createBackButton } from '../components/Components.js';
 import { playTap } from '../lib/haptics.js';
+import { auth, signInWithGoogle, logOut, onUserChange } from '../lib/firebase.js';
 
 export function SettingsView() {
   const el = document.createElement('div');
@@ -44,6 +45,56 @@ export function SettingsView() {
     row.appendChild(toggle);
     return row;
   }
+
+  // --- Account Section ---
+  const accountHeader = document.createElement('div');
+  accountHeader.className = 'settings-section-header';
+  accountHeader.textContent = 'Account & Sync';
+  scroll.appendChild(accountHeader);
+
+  const accountSection = document.createElement('div');
+  accountSection.className = 'settings-section';
+  scroll.appendChild(accountSection);
+
+  function renderAccount(user) {
+    accountSection.innerHTML = '';
+    if (user) {
+      accountSection.innerHTML = `
+        <div style="padding:16px;display:flex;align-items:center;gap:12px;">
+          <img src="${user.photoURL || ''}" style="width:40px;height:40px;border-radius:50%;background:#333;" />
+          <div style="flex:1">
+            <h3 style="margin:0;font-size:16px;">${user.displayName || 'Player'}</h3>
+            <p style="margin:0;font-size:12px;color:#888;">Cloud Sync Active</p>
+          </div>
+          <button id="btn-logout" style="background:rgba(255,0,0,0.2);color:#ff4444;border:none;padding:6px 12px;border-radius:6px;font-weight:bold;">Sign Out</button>
+        </div>
+      `;
+      accountSection.querySelector('#btn-logout').addEventListener('click', async () => {
+        playTap();
+        await logOut();
+      });
+    } else {
+      accountSection.innerHTML = `
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;">
+          <p style="margin:0;color:#888;font-size:14px;">Sign in to sync your players, words, and history across devices.</p>
+          <button id="btn-login" style="background:#4285F4;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z"/></svg>
+            Sign in with Google
+          </button>
+        </div>
+      `;
+      accountSection.querySelector('#btn-login').addEventListener('click', async () => {
+        playTap();
+        try {
+          await signInWithGoogle();
+        } catch(e) {}
+      });
+    }
+  }
+
+  // Initial render + listener
+  renderAccount(auth?.currentUser || null);
+  onUserChange((user) => renderAccount(user));
 
   // --- Gameplay Section ---
   const gameplayHeader = document.createElement('div');

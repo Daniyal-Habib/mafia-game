@@ -1,5 +1,6 @@
 // Storage — localStorage persistence matching iOS CloudSaveManager + UserDefaults
-
+import { getDb, auth, onUserChange } from './firebase.js';
+import { ref, get, set } from 'firebase/database';
 const KEYS = {
   players: 'mafia_players',
   history: 'mafia_history',
@@ -19,9 +20,58 @@ function safeSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+let currentUser = null;
+onUserChange((user) => {
+  currentUser = user;
+  if (user) {
+    syncFromCloud();
+  }
+});
+
+export async function syncToCloud() {
+  if (!currentUser) return;
+  const db = getDb();
+  if (!db) return;
+
+  const data = {
+    players: safeGet(KEYS.players, []),
+    history: safeGet(KEYS.history, []),
+    words: safeGet(KEYS.words, []),
+    settings: safeGet(KEYS.settings, {}),
+  };
+
+  try {
+    await set(ref(db, `users/${currentUser.uid}`), data);
+  } catch (e) {
+    console.error('[Cloud] Sync to cloud failed:', e);
+  }
+}
+
+export async function syncFromCloud() {
+  if (!currentUser) return;
+  const db = getDb();
+  if (!db) return;
+
+  try {
+    const snapshot = await get(ref(db, `users/${currentUser.uid}`));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      if (data.players) safeSet(KEYS.players, data.players);
+      if (data.history) safeSet(KEYS.history, data.history);
+      if (data.words) safeSet(KEYS.words, data.words);
+      if (data.settings) safeSet(KEYS.settings, data.settings);
+      
+      // Notify stores to reload from localStorage
+      window.dispatchEvent(new Event('cloudSyncComplete'));
+    }
+  } catch (e) {
+    console.error('[Cloud] Load from cloud failed:', e);
+  }
+}
+
 // ---------- Players ----------
 export function loadPlayers() { return safeGet(KEYS.players, []); }
-export function savePlayers(players) { safeSet(KEYS.players, players); }
+export function savePlayers(players) { safeSet(KEYS.players, players); syncToCloud(); }
 
 // ---------- Player Images (stored separately to avoid JSON bloat) ----------
 export function savePlayerImage(playerId, dataUrl) {
@@ -43,15 +93,15 @@ const DEFAULT_SETTINGS = {
   turnTimerDuration: 120,
 };
 export function loadSettings() { return { ...DEFAULT_SETTINGS, ...safeGet(KEYS.settings, {}) }; }
-export function saveSettings(settings) { safeSet(KEYS.settings, settings); }
+export function saveSettings(settings) { safeSet(KEYS.settings, settings); syncToCloud(); }
 
 // ---------- Game History ----------
 export function loadHistory() { return safeGet(KEYS.history, []); }
-export function saveHistory(history) { safeSet(KEYS.history, history); }
+export function saveHistory(history) { safeSet(KEYS.history, history); syncToCloud(); }
 
 // ---------- Words ----------
 export function loadWords() { return safeGet(KEYS.words, []); }
-export function saveWords(words) { safeSet(KEYS.words, words); }
+export function saveWords(words) { safeSet(KEYS.words, words); syncToCloud(); }
 
 // ---------- Active Game ----------
 export function saveActiveGame(data) { safeSet(KEYS.activeGame, data); }
