@@ -42,7 +42,7 @@ export function HomeView() {
   }
 
   // New Game
-  const newGameBtn = createGameButton('NEW GAME', 'default', () => {
+  const newGameBtn = createGameButton('MAFIA GAME', 'default', () => {
     playTap();
     if (playerStore.players.length === 0) {
       navigate('/players');
