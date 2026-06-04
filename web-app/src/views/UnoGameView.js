@@ -1,6 +1,5 @@
-// UnoGameView.js — Main UNO game screen with table layout and card animations
+// UnoGameView.js — Landscape UNO game with circular table layout
 import { navigate } from '../lib/router.js';
-import { createNavBar, createNavButton } from '../components/Components.js';
 import { playTap, playSuccess, playError, playLight } from '../lib/haptics.js';
 import { subscribeToRoom, deviceId, unoPlayCard, unoDrawCard, unoChooseColor, unoCallUno, leaveRoom } from '../lib/roomStore.js';
 import { isPlayable, getCardDisplay, CARD_COLORS, calculateScore } from '../models/UnoEngine.js';
@@ -13,54 +12,79 @@ export function UnoGameView(data) {
   el.className = 'view uno-view';
 
   let lastRenderedState = null;
-  let animatingCard = null;
 
-  // Build the layout
+  // Build the landscape table layout
   el.innerHTML = `
-    <div class="uno-table">
-      <div class="uno-opponents" id="uno-opponents"></div>
-      <div class="uno-center">
-        <div class="uno-direction" id="uno-direction">↻</div>
-        <div class="uno-piles">
-          <button class="uno-draw-pile" id="uno-draw">
-            <div class="uno-card-back">
-              <div class="uno-card-back-text">UNO</div>
-            </div>
-            <div class="uno-draw-label">DRAW</div>
-          </button>
-          <div class="uno-discard-pile" id="uno-discard"></div>
+    <div class="uno-table-landscape">
+      <!-- Opponent positions: top, left, right -->
+      <div class="uno-seat uno-seat-top" id="uno-seat-top"></div>
+      <div class="uno-seat uno-seat-left" id="uno-seat-left"></div>
+      <div class="uno-seat uno-seat-right" id="uno-seat-right"></div>
+      <div class="uno-seat uno-seat-top-left" id="uno-seat-top-left"></div>
+      <div class="uno-seat uno-seat-top-right" id="uno-seat-top-right"></div>
+
+      <!-- Center table area -->
+      <div class="uno-table-center">
+        <div class="uno-direction-ring" id="uno-direction-ring">
+          <svg class="uno-direction-svg" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+            <path id="uno-dir-arrow" d="" fill="rgba(255,200,0,0.6)" />
+          </svg>
+          <div class="uno-direction-label" id="uno-direction-label">↻</div>
         </div>
-        <div class="uno-active-color" id="uno-active-color"></div>
-        <div class="uno-status" id="uno-status"></div>
+        <div class="uno-piles-row">
+          <button class="uno-draw-stack" id="uno-draw">
+            <div class="uno-stack-card c3"></div>
+            <div class="uno-stack-card c2"></div>
+            <div class="uno-stack-card c1">
+              <div class="uno-card-back-inner">UNO</div>
+            </div>
+            <div class="uno-draw-count" id="uno-draw-count">0</div>
+          </button>
+          <div class="uno-discard-area" id="uno-discard"></div>
+        </div>
       </div>
-      <div class="uno-my-hand-wrapper">
-        <div class="uno-my-hand" id="uno-my-hand"></div>
+
+      <!-- Status bar -->
+      <div class="uno-turn-banner" id="uno-turn-banner">Waiting...</div>
+
+      <!-- My hand at bottom -->
+      <div class="uno-my-section">
+        <div class="uno-my-info" id="uno-my-info"></div>
+        <div class="uno-hand-scroll">
+          <div class="uno-my-hand" id="uno-my-hand"></div>
+        </div>
       </div>
+
+      <!-- UNO call button -->
       <button class="uno-call-btn hidden" id="uno-call-btn">UNO!</button>
     </div>
+
+    <!-- Color picker overlay -->
     <div class="uno-color-picker hidden" id="uno-color-picker">
       <div class="uno-color-picker-card">
         <div class="uno-color-picker-title">Choose a color</div>
         <div class="uno-color-options">
-          <button class="uno-color-opt uno-color-red" data-color="red"></button>
-          <button class="uno-color-opt uno-color-green" data-color="green"></button>
-          <button class="uno-color-opt uno-color-blue" data-color="blue"></button>
-          <button class="uno-color-opt uno-color-yellow" data-color="yellow"></button>
+          <button class="uno-color-opt" data-color="red" style="background:linear-gradient(135deg,#e53935,#c62828)"></button>
+          <button class="uno-color-opt" data-color="green" style="background:linear-gradient(135deg,#43a047,#2e7d32)"></button>
+          <button class="uno-color-opt" data-color="blue" style="background:linear-gradient(135deg,#1e88e5,#1565c0)"></button>
+          <button class="uno-color-opt" data-color="yellow" style="background:linear-gradient(135deg,#fdd835,#f9a825)"></button>
         </div>
       </div>
     </div>
+
+    <!-- Effect overlay -->
     <div class="uno-effect-overlay hidden" id="uno-effect-overlay">
       <div class="uno-effect-text" id="uno-effect-text"></div>
     </div>
   `;
 
-  // Event: draw pile
+  // Events
   el.querySelector('#uno-draw').addEventListener('click', async () => {
     playTap();
     await unoDrawCard(code);
   });
 
-  // Event: color picker
   el.querySelectorAll('.uno-color-opt').forEach(btn => {
     btn.addEventListener('click', async () => {
       playSuccess();
@@ -69,14 +93,13 @@ export function UnoGameView(data) {
     });
   });
 
-  // Event: UNO call
   el.querySelector('#uno-call-btn').addEventListener('click', async () => {
     playSuccess();
     await unoCallUno(code);
     showEffect('UNO!', '#ff3b30');
   });
 
-  // Render a single card element
+  // Render a card element
   function renderCard(card, faceUp = true, playable = false, isMyCard = false) {
     const cardEl = document.createElement('div');
     cardEl.className = `uno-card${faceUp ? ' face-up' : ' face-down'}${playable ? ' playable' : ''}`;
@@ -87,32 +110,28 @@ export function UnoGameView(data) {
       const colors = CARD_COLORS[card.color] || CARD_COLORS.wild;
       cardEl.style.background = colors.bg;
       cardEl.style.borderColor = colors.border;
-
-      const isTextDark = card.color === 'yellow';
+      const dark = card.color === 'yellow';
 
       cardEl.innerHTML = `
-        <div class="uno-card-corner top" ${isTextDark ? 'style="color:#333"' : ''}>${symbol}</div>
-        <div class="uno-card-symbol" ${isTextDark ? 'style="color:#333"' : ''}>${symbol}</div>
-        <div class="uno-card-corner bottom" ${isTextDark ? 'style="color:#333"' : ''}>${symbol}</div>
+        <div class="uno-card-corner top" ${dark ? 'style="color:#333"' : ''}>${symbol}</div>
+        <div class="uno-card-symbol" ${dark ? 'style="color:#333"' : ''}>${symbol}</div>
+        <div class="uno-card-corner bottom" ${dark ? 'style="color:#333"' : ''}>${symbol}</div>
       `;
 
       if (isMyCard && playable) {
         cardEl.addEventListener('click', async () => {
           playTap();
-          // Animate card flying to center
           cardEl.classList.add('uno-card-playing');
-          animatingCard = card.id;
           await unoPlayCard(code, card.id);
         });
       }
     } else {
-      cardEl.innerHTML = `<div class="uno-card-back"><div class="uno-card-back-text">UNO</div></div>`;
+      cardEl.innerHTML = `<div class="uno-mini-back">UNO</div>`;
     }
 
     return cardEl;
   }
 
-  // Show a temporary effect overlay
   function showEffect(text, color = '#fff') {
     const overlay = el.querySelector('#uno-effect-overlay');
     const textEl = el.querySelector('#uno-effect-text');
@@ -122,7 +141,31 @@ export function UnoGameView(data) {
     setTimeout(() => overlay.classList.add('hidden'), 1200);
   }
 
-  // Main render function
+  // Render an opponent seat
+  function renderSeat(seatEl, player, cardCount, isTurn, cards) {
+    if (!player) { seatEl.innerHTML = ''; seatEl.style.display = 'none'; return; }
+    seatEl.style.display = '';
+    const initial = (player.name || '?').charAt(0).toUpperCase();
+
+    // Build mini card fan
+    const fanCount = Math.min(cardCount, 8);
+    const fanCards = Array(fanCount).fill('').map((_, i) => {
+      const angle = (i - (fanCount - 1) / 2) * 8;
+      const tx = (i - (fanCount - 1) / 2) * 6;
+      return `<div class="uno-fan-card" style="transform:rotate(${angle}deg) translateX(${tx}px)"></div>`;
+    }).join('');
+
+    seatEl.innerHTML = `
+      <div class="uno-seat-inner${isTurn ? ' is-turn' : ''}">
+        <div class="uno-seat-avatar">${initial}</div>
+        <div class="uno-seat-name">${player.name || 'Player'}</div>
+        <div class="uno-seat-fan">${fanCards}</div>
+        <div class="uno-seat-count">${cardCount}</div>
+      </div>
+    `;
+  }
+
+  // Main render
   function render(room) {
     const uno = room.uno;
     if (!uno) return;
@@ -133,52 +176,64 @@ export function UnoGameView(data) {
     const topCard = uno.discardPile?.[uno.discardPile.length - 1];
     const isMyTurn = uno.currentTurn === deviceId;
 
-    // Show effect for last action
-    if (lastRenderedState && uno.lastAction && 
+    // Effects
+    if (lastRenderedState && uno.lastAction &&
         JSON.stringify(uno.lastAction) !== JSON.stringify(lastRenderedState.lastAction)) {
       const action = uno.lastAction;
-      const actorName = players[action.player]?.name || 'Someone';
-      if (action.type === 'skip') showEffect(`${actorName} SKIPPED!`, '#ff9800');
+      const name = players[action.player]?.name || 'Someone';
+      if (action.type === 'skip') showEffect(`${name} SKIPPED!`, '#ff9800');
       else if (action.type === 'reverse') showEffect('REVERSED! ⟲', '#9c27b0');
-      else if (action.type === 'draw2') showEffect(`+2 cards!`, '#e53935');
-      else if (action.type === 'wild_draw4') showEffect(`+4 cards!`, '#e53935');
-      else if (action.type === 'draw') {
-        if (action.player !== deviceId) showEffect(`${actorName} drew a card`, '#888');
-      }
+      else if (action.type === 'draw2') showEffect('+2 cards!', '#e53935');
+      else if (action.type === 'wild_draw4') showEffect('+4 cards!', '#e53935');
+      else if (action.type === 'draw' && action.player !== deviceId) showEffect(`${name} drew`, '#888');
     }
     lastRenderedState = { ...uno };
 
-    // --- Opponents ---
-    const opponentsEl = el.querySelector('#uno-opponents');
-    opponentsEl.innerHTML = '';
+    // --- Seat assignments ---
+    // Place opponents around the table based on count
     const opponents = turnOrder.filter(id => id !== deviceId);
+    const seats = ['uno-seat-top', 'uno-seat-left', 'uno-seat-right', 'uno-seat-top-left', 'uno-seat-top-right'];
+    const seatIds = seats.map(s => el.querySelector(`#${s}`));
 
-    opponents.forEach(pid => {
+    // Clear all seats
+    seatIds.forEach(s => { s.innerHTML = ''; s.style.display = 'none'; });
+
+    // Assign opponents to seats based on count
+    const seatMap = [];
+    if (opponents.length === 1) {
+      seatMap.push({ seat: seatIds[0], pid: opponents[0] }); // top
+    } else if (opponents.length === 2) {
+      seatMap.push({ seat: seatIds[1], pid: opponents[0] }); // left
+      seatMap.push({ seat: seatIds[2], pid: opponents[1] }); // right
+    } else if (opponents.length === 3) {
+      seatMap.push({ seat: seatIds[1], pid: opponents[0] }); // left
+      seatMap.push({ seat: seatIds[0], pid: opponents[1] }); // top
+      seatMap.push({ seat: seatIds[2], pid: opponents[2] }); // right
+    } else if (opponents.length === 4) {
+      seatMap.push({ seat: seatIds[1], pid: opponents[0] }); // left
+      seatMap.push({ seat: seatIds[3], pid: opponents[1] }); // top-left
+      seatMap.push({ seat: seatIds[4], pid: opponents[2] }); // top-right
+      seatMap.push({ seat: seatIds[2], pid: opponents[3] }); // right
+    } else if (opponents.length >= 5) {
+      seatMap.push({ seat: seatIds[1], pid: opponents[0] }); // left
+      seatMap.push({ seat: seatIds[3], pid: opponents[1] }); // top-left
+      seatMap.push({ seat: seatIds[0], pid: opponents[2] }); // top
+      seatMap.push({ seat: seatIds[4], pid: opponents[3] }); // top-right
+      seatMap.push({ seat: seatIds[2], pid: opponents[4] }); // right
+    }
+
+    seatMap.forEach(({ seat, pid }) => {
       const p = players[pid];
-      const cardCount = (uno.hands?.[pid] || []).length;
+      const count = (uno.hands?.[pid] || []).length;
       const isTurn = uno.currentTurn === pid;
-
-      const oppEl = document.createElement('div');
-      oppEl.className = `uno-opponent${isTurn ? ' active-turn' : ''}`;
-      oppEl.innerHTML = `
-        <div class="uno-opp-avatar">${(p?.name || '?').charAt(0).toUpperCase()}</div>
-        <div class="uno-opp-info">
-          <div class="uno-opp-name">${p?.name || 'Player'}</div>
-          <div class="uno-opp-cards">
-            ${Array(Math.min(cardCount, 10)).fill('').map((_, i) => 
-              `<div class="uno-mini-card" style="margin-left:${i > 0 ? '-8px' : '0'}"></div>`
-            ).join('')}
-            ${cardCount > 10 ? `<span class="uno-card-count-extra">+${cardCount - 10}</span>` : ''}
-          </div>
-        </div>
-        <div class="uno-opp-count">${cardCount}</div>
-      `;
-      opponentsEl.appendChild(oppEl);
+      renderSeat(seat, p, count, isTurn);
     });
 
-    // --- Direction ---
-    const dirEl = el.querySelector('#uno-direction');
-    dirEl.textContent = uno.direction === 1 ? '↻' : '↺';
+    // --- Direction ring ---
+    const dirLabel = el.querySelector('#uno-direction-label');
+    dirLabel.textContent = uno.direction === 1 ? '↻' : '↺';
+    const ring = el.querySelector('#uno-direction-ring');
+    ring.className = `uno-direction-ring ${uno.direction === 1 ? 'cw' : 'ccw'}`;
 
     // --- Discard pile ---
     const discardEl = el.querySelector('#uno-discard');
@@ -187,22 +242,28 @@ export function UnoGameView(data) {
       const topCardEl = renderCard(topCard, true);
       topCardEl.classList.add('uno-discard-top');
       discardEl.appendChild(topCardEl);
+
+      // Color indicator ring on discard
+      const colorRing = document.createElement('div');
+      const activeColorHex = { red: '#e53935', green: '#43a047', blue: '#1e88e5', yellow: '#fdd835' };
+      colorRing.className = 'uno-color-ring';
+      colorRing.style.boxShadow = `0 0 0 3px ${activeColorHex[uno.activeColor] || '#fff'}, 0 0 15px ${activeColorHex[uno.activeColor] || '#fff'}`;
+      discardEl.appendChild(colorRing);
     }
 
-    // --- Active color indicator ---
-    const colorEl = el.querySelector('#uno-active-color');
-    const colorNames = { red: '🔴', green: '🟢', blue: '🔵', yellow: '🟡' };
-    colorEl.textContent = colorNames[uno.activeColor] || '';
+    // --- Draw pile count ---
+    const drawCount = el.querySelector('#uno-draw-count');
+    drawCount.textContent = (uno.drawPile || []).length;
 
-    // --- Status ---
-    const statusEl = el.querySelector('#uno-status');
+    // --- Turn banner ---
+    const banner = el.querySelector('#uno-turn-banner');
     if (isMyTurn) {
-      statusEl.textContent = uno.pendingWild ? 'Choose a color!' : 'Your turn!';
-      statusEl.style.color = '#34c759';
+      banner.textContent = uno.pendingWild ? '🎨 Choose a color!' : '🟢 Your turn — play or draw!';
+      banner.className = 'uno-turn-banner my-turn';
     } else {
-      const currentPlayerName = players[uno.currentTurn]?.name || 'Someone';
-      statusEl.textContent = `${currentPlayerName}'s turn`;
-      statusEl.style.color = '#888';
+      const curName = players[uno.currentTurn]?.name || 'Someone';
+      banner.textContent = `⏳ ${curName}'s turn`;
+      banner.className = 'uno-turn-banner';
     }
 
     // --- Color picker ---
@@ -215,31 +276,34 @@ export function UnoGameView(data) {
     // --- My hand ---
     const handEl = el.querySelector('#uno-my-hand');
     handEl.innerHTML = '';
-
     myHand.forEach(card => {
       const playable = isMyTurn && !uno.pendingWild && isPlayable(card, topCard, uno.activeColor);
       const cardEl = renderCard(card, true, playable, true);
       handEl.appendChild(cardEl);
     });
 
+    // --- My info ---
+    const myInfo = el.querySelector('#uno-my-info');
+    const myPlayer = players[deviceId];
+    myInfo.innerHTML = `
+      <div class="uno-my-avatar">${(myPlayer?.name || '?').charAt(0).toUpperCase()}</div>
+      <span class="uno-my-name">${myPlayer?.name || 'You'}</span>
+      <span class="uno-my-card-count">${myHand.length} cards</span>
+    `;
+
     // --- UNO button ---
     const unoBtn = el.querySelector('#uno-call-btn');
-    const shouldShowUno = myHand.length === 2 && isMyTurn && !uno.calledUno?.[deviceId];
-    if (shouldShowUno) {
+    if (myHand.length === 2 && isMyTurn && !uno.calledUno?.[deviceId]) {
       unoBtn.classList.remove('hidden');
     } else {
       unoBtn.classList.add('hidden');
     }
 
-    // --- Draw pile glow when it's my turn ---
+    // --- Draw pile glow ---
     const drawBtn = el.querySelector('#uno-draw');
-    if (isMyTurn && !uno.pendingWild) {
-      drawBtn.classList.add('can-draw');
-    } else {
-      drawBtn.classList.remove('can-draw');
-    }
+    drawBtn.classList.toggle('can-draw', isMyTurn && !uno.pendingWild);
 
-    // --- Check for winner ---
+    // --- Winner ---
     if (uno.winner) {
       setTimeout(() => {
         navigate('/uno-game-over', { code, room, winner: uno.winner, isHost });
@@ -247,15 +311,11 @@ export function UnoGameView(data) {
     }
   }
 
-  // Subscribe to room updates
   const unsub = subscribeToRoom(code, (room) => {
     if (!room) { navigate('/'); return; }
     if (room.status !== 'uno-playing') return;
     render(room);
   });
 
-  return {
-    element: el,
-    cleanup: () => unsub(),
-  };
+  return { element: el, cleanup: () => unsub() };
 }

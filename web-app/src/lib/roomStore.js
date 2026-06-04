@@ -184,7 +184,7 @@ export async function updatePlayerProfile(code, newName, newAvatarBase64) {
 // ============ UNO GAME FUNCTIONS ============
 
 // Host starts UNO game
-export async function hostStartUnoGame(code, room) {
+export async function hostStartUnoGame(code, room, cardsPerHand = 7) {
   const db = initFirebase();
   const players = Object.values(room.players);
   const playerIds = players.map(p => p.id);
@@ -193,7 +193,7 @@ export async function hostStartUnoGame(code, room) {
   const turnOrder = [...playerIds].sort(() => Math.random() - 0.5);
 
   // Deal cards
-  const { hands, drawPile, discardPile, startCard } = dealHands(turnOrder, 7);
+  const { hands, drawPile, discardPile, startCard } = dealHands(turnOrder, cardsPerHand);
 
   const unoState = serializeState({
     drawPile,

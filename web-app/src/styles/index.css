@@ -1409,323 +1409,425 @@ html, body {
 }
 
 /* ============================================================
-   UNO GAME STYLES
+   UNO GAME STYLES — Landscape Circular Table
    ============================================================ */
 
-/* Main table layout */
+/* Force landscape feel */
 .uno-view {
-  background: radial-gradient(ellipse at center, #1a3a1a 0%, #0d1f0d 50%, #050f05 100%) !important;
+  background: radial-gradient(ellipse at 50% 60%, #1a3a1a 0%, #0d1f0d 40%, #050f05 100%) !important;
   overflow: hidden !important;
 }
 
-.uno-table {
+.uno-table-landscape {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* --- Seats for opponents --- */
+.uno-seat {
+  position: absolute;
+  z-index: 5;
+  display: none;
+}
+.uno-seat-top { top: 8px; left: 50%; transform: translateX(-50%); }
+.uno-seat-left { left: 8px; top: 38%; transform: translateY(-50%); }
+.uno-seat-right { right: 8px; top: 38%; transform: translateY(-50%); }
+.uno-seat-top-left { top: 8px; left: 16%; }
+.uno-seat-top-right { top: 8px; right: 16%; }
+
+.uno-seat-inner {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  position: relative;
-}
-
-/* --- Opponents section (top) --- */
-.uno-opponents {
-  display: flex;
-  gap: 8px;
-  padding: 12px 12px 8px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-  overflow-x: auto;
-  scrollbar-width: none;
-  flex-shrink: 0;
-}
-.uno-opponents::-webkit-scrollbar { display: none; }
-
-.uno-opponent {
-  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   padding: 8px 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  flex-shrink: 0;
-  min-width: 120px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  min-width: 70px;
   transition: all 0.3s ease;
 }
-.uno-opponent.active-turn {
-  background: rgba(52,199,89,0.12);
-  border-color: rgba(52,199,89,0.4);
-  box-shadow: 0 0 16px rgba(52,199,89,0.15);
-  animation: turnPulse 2s ease-in-out infinite;
+.uno-seat-inner.is-turn {
+  border-color: rgba(52,199,89,0.6);
+  box-shadow: 0 0 20px rgba(52,199,89,0.25);
+  animation: seatPulse 2s ease-in-out infinite;
 }
-@keyframes turnPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(52,199,89,0.15); }
-  50% { box-shadow: 0 0 24px rgba(52,199,89,0.3); }
+@keyframes seatPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(52,199,89,0.25); }
+  50% { box-shadow: 0 0 30px rgba(52,199,89,0.45); }
 }
 
-.uno-opp-avatar {
-  width: 32px;
-  height: 32px;
+.uno-seat-avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6e2fa0, #bf5af2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
-  flex-shrink: 0;
+  color: #fff;
 }
-.uno-opp-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.uno-opp-name {
-  font-size: 12px;
+.uno-seat-name {
+  font-size: 11px;
   font-weight: 600;
   color: #fff;
+  max-width: 80px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.uno-opp-cards {
-  display: flex;
-  align-items: center;
-}
-.uno-mini-card {
-  width: 14px;
-  height: 20px;
-  border-radius: 2px;
-  background: linear-gradient(135deg, #2a2a4a, #1a1a3a);
-  border: 1px solid rgba(255,255,255,0.15);
-  flex-shrink: 0;
-}
-.uno-card-count-extra {
-  font-size: 10px;
-  color: #888;
-  margin-left: 4px;
-}
-.uno-opp-count {
-  font-size: 18px;
-  font-weight: 800;
-  color: #fff;
-  min-width: 24px;
   text-align: center;
 }
 
+/* Fan of face-down cards */
+.uno-seat-fan {
+  display: flex;
+  justify-content: center;
+  height: 28px;
+  position: relative;
+  width: 80px;
+}
+.uno-fan-card {
+  width: 18px;
+  height: 26px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #1a1a3a, #2d2d5e);
+  border: 1px solid rgba(255,255,255,0.15);
+  position: absolute;
+  left: 50%;
+  margin-left: -9px;
+  transform-origin: bottom center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.uno-seat-count {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.1);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
 /* --- Center table area --- */
-.uno-center {
-  flex: 1;
+.uno-table-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  gap: 8px;
+  z-index: 3;
+}
+
+/* Direction ring */
+.uno-direction-ring {
   position: relative;
-}
-
-.uno-direction {
-  font-size: 28px;
-  color: rgba(255,255,255,0.3);
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.uno-piles {
+  width: 160px;
+  height: 160px;
   display: flex;
-  gap: 24px;
   align-items: center;
+  justify-content: center;
+}
+.uno-direction-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.uno-direction-label {
+  font-size: 40px;
+  color: rgba(255,200,0,0.5);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1;
+}
+.uno-direction-ring.cw .uno-direction-label { animation: spinCW 8s linear infinite; }
+.uno-direction-ring.ccw .uno-direction-label { animation: spinCCW 8s linear infinite; }
+@keyframes spinCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes spinCCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
 }
 
-.uno-draw-pile {
+/* Piles inside the ring */
+.uno-piles-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+/* Draw pile stack */
+.uno-draw-stack {
   position: relative;
+  width: 64px;
+  height: 92px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
   transition: transform 0.2s;
 }
-.uno-draw-pile:active {
-  transform: scale(0.95);
+.uno-draw-stack:active { transform: scale(0.93); }
+.uno-draw-stack.can-draw .c1 {
+  animation: drawGlow 1.5s ease-in-out infinite;
 }
-.uno-draw-pile.can-draw .uno-card-back {
-  box-shadow: 0 0 20px rgba(255,255,255,0.2);
-  animation: drawPulse 1.5s ease-in-out infinite;
-}
-@keyframes drawPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-  50% { box-shadow: 0 0 30px rgba(255,255,255,0.4); }
-}
-.uno-draw-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: rgba(255,255,255,0.4);
+@keyframes drawGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 20px rgba(255,255,255,0.4); }
 }
 
-.uno-discard-pile {
+.uno-stack-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1a1a3a, #2d2d5e);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.uno-stack-card.c3 { top: -4px; left: 2px; }
+.uno-stack-card.c2 { top: -2px; left: 1px; }
+.uno-stack-card.c1 {
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.uno-card-back-inner {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 1px;
+  transform: rotate(-25deg);
+}
+.uno-draw-count {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  z-index: 2;
+}
+
+/* Discard area */
+.uno-discard-area {
   position: relative;
-  width: 80px;
-  height: 120px;
+  width: 64px;
+  height: 92px;
 }
 .uno-discard-top {
   position: absolute;
   inset: 0;
-  animation: cardPlace 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cardLand 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes cardPlace {
-  from { transform: scale(0.5) rotate(-15deg); opacity: 0; }
+@keyframes cardLand {
+  from { transform: scale(0.4) rotate(-20deg); opacity: 0; }
   to { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-.uno-active-color {
-  font-size: 20px;
-}
-
-.uno-status {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  transition: color 0.3s;
+/* Color ring around discard */
+.uno-color-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: -1;
+  transition: box-shadow 0.3s;
 }
 
 /* --- Card styling --- */
 .uno-card {
-  width: 80px;
-  height: 120px;
-  border-radius: 10px;
+  width: 64px;
+  height: 92px;
+  border-radius: 8px;
   border: 2px solid rgba(255,255,255,0.2);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, margin-top 0.2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-
-.uno-card.face-down {
-  cursor: default;
-}
-
-.uno-card-back {
-  width: 80px;
-  height: 120px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #1a1a3a, #2d2d5e);
-  border: 2px solid rgba(255,255,255,0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-
-.uno-card-back-text {
-  font-size: 16px;
-  font-weight: 900;
-  color: rgba(255,255,255,0.2);
-  letter-spacing: 2px;
-  transform: rotate(-30deg);
 }
 
 .uno-card-corner {
   position: absolute;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
-.uno-card-corner.top {
-  top: 6px;
-  left: 6px;
-}
-.uno-card-corner.bottom {
-  bottom: 6px;
-  right: 6px;
-  transform: rotate(180deg);
-}
-
+.uno-card-corner.top { top: 4px; left: 5px; }
+.uno-card-corner.bottom { bottom: 4px; right: 5px; transform: rotate(180deg); }
 .uno-card-symbol {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
   color: #fff;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
-/* Playable card glow */
+.uno-mini-back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.15);
+  transform: rotate(-25deg);
+}
+
+/* Playable glow */
 .uno-card.playable {
   cursor: pointer;
-  animation: playableGlow 1.5s ease-in-out infinite;
+  margin-top: -8px;
+  animation: cardGlow 1.5s ease-in-out infinite;
 }
 .uno-card.playable:hover {
-  transform: translateY(-12px) scale(1.05);
-  z-index: 10;
+  transform: translateY(-14px) scale(1.08);
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(255,255,255,0.3);
 }
 .uno-card.playable:active {
-  transform: translateY(-4px) scale(0.98);
+  transform: translateY(-4px) scale(0.96);
 }
-@keyframes playableGlow {
+@keyframes cardGlow {
   0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-  50% { box-shadow: 0 4px 20px rgba(255,255,255,0.3); }
+  50% { box-shadow: 0 4px 16px rgba(255,255,255,0.25); }
 }
 
-/* Non-playable dimming */
+/* Dimmed non-playable */
 .uno-card.face-up:not(.playable):not(.uno-discard-top) {
-  opacity: 0.5;
-  filter: brightness(0.7);
+  opacity: 0.45;
+  filter: brightness(0.65);
 }
 
-/* Card playing animation */
+/* Card play animation */
 .uno-card-playing {
-  animation: cardFly 0.4s ease forwards !important;
+  animation: cardFlyUp 0.35s ease forwards !important;
   pointer-events: none;
   z-index: 100;
 }
-@keyframes cardFly {
+@keyframes cardFlyUp {
   0% { transform: translateY(0) scale(1); opacity: 1; }
-  50% { transform: translateY(-100px) scale(0.8) rotate(10deg); opacity: 0.8; }
-  100% { transform: translateY(-200px) scale(0.3); opacity: 0; }
+  50% { transform: translateY(-80px) scale(0.7) rotate(8deg); opacity: 0.7; }
+  100% { transform: translateY(-160px) scale(0.2); opacity: 0; }
 }
 
-/* --- My hand (bottom) --- */
-.uno-my-hand-wrapper {
-  padding: 8px 0;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  flex-shrink: 0;
-  overflow: hidden;
+/* --- Turn banner --- */
+.uno-turn-banner {
+  position: absolute;
+  bottom: 155px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  white-space: nowrap;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s;
 }
+.uno-turn-banner.my-turn {
+  color: #34c759;
+  border-color: rgba(52,199,89,0.3);
+  background: rgba(52,199,89,0.1);
+}
+
+/* --- My hand section (bottom) --- */
+.uno-my-section {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.uno-my-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 4px;
+}
+.uno-my-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #cc1a0a, #800000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+}
+.uno-my-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.uno-my-card-count {
+  font-size: 11px;
+  color: #888;
+}
+
+.uno-hand-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  padding: 8px 0 12px;
+}
+.uno-hand-scroll::-webkit-scrollbar { display: none; }
+
 .uno-my-hand {
   display: flex;
-  gap: 6px;
-  padding: 8px 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  scroll-snap-type: x mandatory;
+  gap: 4px;
+  padding: 4px 16px 8px;
   justify-content: center;
-  flex-wrap: nowrap;
-}
-.uno-my-hand::-webkit-scrollbar { display: none; }
-.uno-my-hand .uno-card {
-  scroll-snap-align: center;
+  min-height: 100px;
 }
 
 /* --- UNO call button --- */
 .uno-call-btn {
   position: absolute;
-  bottom: 160px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 155px;
+  right: 20px;
   background: linear-gradient(135deg, #e53935, #c62828);
   color: #fff;
   border: 3px solid #ff5252;
   border-radius: 50%;
-  width: 70px;
-  height: 70px;
-  font-size: 16px;
+  width: 64px;
+  height: 64px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 1px;
   cursor: pointer;
@@ -1737,15 +1839,13 @@ html, body {
   justify-content: center;
   font-family: inherit;
 }
-.uno-call-btn.hidden {
-  display: none !important;
-}
+.uno-call-btn.hidden { display: none !important; }
 @keyframes unoPulse {
-  0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 4px 20px rgba(229,57,53,0.5); }
-  50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 6px 30px rgba(229,57,53,0.7); }
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(229,57,53,0.5); }
+  50% { transform: scale(1.1); box-shadow: 0 6px 30px rgba(229,57,53,0.7); }
 }
 
-/* --- Color picker modal --- */
+/* --- Color picker --- */
 .uno-color-picker {
   position: fixed;
   inset: 0;
@@ -1756,9 +1856,7 @@ html, body {
   justify-content: center;
   animation: fadeIn 0.2s ease;
 }
-.uno-color-picker.hidden {
-  display: none !important;
-}
+.uno-color-picker.hidden { display: none !important; }
 .uno-color-picker-card {
   background: #1c1c1e;
   border-radius: 24px;
@@ -1778,24 +1876,15 @@ html, body {
   gap: 12px;
 }
 .uno-color-opt {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 16px;
   border: 3px solid rgba(255,255,255,0.2);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.uno-color-opt:active {
-  transform: scale(0.9);
-}
-.uno-color-opt:hover {
-  transform: scale(1.05);
-  border-color: #fff;
-}
-.uno-color-red { background: linear-gradient(135deg, #e53935, #c62828); }
-.uno-color-green { background: linear-gradient(135deg, #43a047, #2e7d32); }
-.uno-color-blue { background: linear-gradient(135deg, #1e88e5, #1565c0); }
-.uno-color-yellow { background: linear-gradient(135deg, #fdd835, #f9a825); }
+.uno-color-opt:active { transform: scale(0.9); }
+.uno-color-opt:hover { transform: scale(1.05); border-color: #fff; }
 
 /* --- Effect overlay --- */
 .uno-effect-overlay {
@@ -1807,11 +1896,9 @@ html, body {
   justify-content: center;
   pointer-events: none;
 }
-.uno-effect-overlay.hidden {
-  display: none !important;
-}
+.uno-effect-overlay.hidden { display: none !important; }
 .uno-effect-text {
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 900;
   text-shadow: 0 4px 20px rgba(0,0,0,0.8);
   animation: effectPop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -1824,7 +1911,7 @@ html, body {
   100% { opacity: 0; transform: translateY(-30px); }
 }
 
-/* --- UNO confetti canvas --- */
+/* --- Confetti canvas (game over) --- */
 .uno-confetti-canvas {
   position: fixed;
   inset: 0;
@@ -1832,7 +1919,7 @@ html, body {
   pointer-events: none;
 }
 
-/* --- Mode grid: support 3 columns on desktop, wrap on mobile --- */
+/* --- Mode grid: 3 items on mobile --- */
 @media (max-width: 450px) {
   .mp-mode-grid {
     grid-template-columns: 1fr 1fr;

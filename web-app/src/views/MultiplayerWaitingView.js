@@ -66,6 +66,42 @@ export function MultiplayerWaitingView(data) {
     scroll.appendChild(roleConfig);
   }
 
+  // UNO settings (host + uno mode)
+  let unoCardCount = 7;
+  if (isHost && gameMode === 'uno') {
+    const unoConfig = document.createElement('div');
+    unoConfig.style.marginTop = '24px';
+    unoConfig.innerHTML = `
+      <div class="mp-section-header">UNO Settings</div>
+      <div class="role-config-row" style="margin-top:12px">
+        <div class="role-icon">🃏</div>
+        <div class="role-info">
+          <div class="role-name" style="color:#fff">Starting Cards</div>
+          <div class="role-desc">Cards dealt to each player</div>
+        </div>
+        <div class="counter">
+          <button class="rc-dec" id="uno-cards-dec">−</button>
+          <div class="count" id="uno-cards-count">7</div>
+          <button class="rc-inc" id="uno-cards-inc">+</button>
+        </div>
+      </div>
+    `;
+    scroll.appendChild(unoConfig);
+
+    // Wire up counter buttons after appending to DOM
+    setTimeout(() => {
+      const decBtn = el.querySelector('#uno-cards-dec');
+      const incBtn = el.querySelector('#uno-cards-inc');
+      const countEl = el.querySelector('#uno-cards-count');
+      if (decBtn) decBtn.addEventListener('click', () => {
+        if (unoCardCount > 3) { unoCardCount--; countEl.textContent = unoCardCount; playLight(); }
+      });
+      if (incBtn) incBtn.addEventListener('click', () => {
+        if (unoCardCount < 15) { unoCardCount++; countEl.textContent = unoCardCount; playLight(); }
+      });
+    }, 0);
+  }
+
   // Bottom bar
   const bottomBar = document.createElement('div');
   bottomBar.style.cssText = 'padding:16px 20px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:rgba(0,0,0,0.95);border-top:1px solid rgba(255,255,255,0.08)';
@@ -342,7 +378,7 @@ export function MultiplayerWaitingView(data) {
           const { getDb } = await import('../lib/firebase.js');
           const roomSnap = await get(ref(getDb(), `rooms/${code}`));
           const room = roomSnap.val();
-          await hostStartUnoGame(code, room);
+          await hostStartUnoGame(code, room, unoCardCount);
         } else {
           // Words mode — pick a random word
           const words = wordStore.words;
