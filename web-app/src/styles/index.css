@@ -1530,8 +1530,8 @@ html, body {
 /* Direction ring */
 .uno-direction-ring {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 240px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1543,13 +1543,18 @@ html, body {
   height: 100%;
 }
 .uno-direction-label {
-  font-size: 40px;
-  color: rgba(255,200,0,0.5);
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 1;
+  font-size: 50px;
+  font-weight: bold;
+  color: rgba(255,200,0,0.8);
+  text-shadow: 0 0 10px rgba(255,200,0,0.5);
+  position: absolute;
+  top: -10px; /* Orbit just outside the ring */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
 }
-.uno-direction-ring.cw .uno-direction-label { animation: spinCW 8s linear infinite; }
-.uno-direction-ring.ccw .uno-direction-label { animation: spinCCW 8s linear infinite; }
+.uno-direction-ring.cw { animation: spinCW 10s linear infinite; }
+.uno-direction-ring.ccw { animation: spinCCW 10s linear infinite; }
 @keyframes spinCW {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

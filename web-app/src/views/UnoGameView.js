@@ -27,7 +27,7 @@ export function UnoGameView(data) {
       <div class="uno-table-center">
         <div class="uno-direction-ring" id="uno-direction-ring">
           <svg class="uno-direction-svg" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+            <circle cx="100" cy="100" r="95" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
             <path id="uno-dir-arrow" d="" fill="rgba(255,200,0,0.6)" />
           </svg>
           <div class="uno-direction-label" id="uno-direction-label">↻</div>
@@ -142,25 +142,30 @@ export function UnoGameView(data) {
   }
 
   // Render an opponent seat
-  function renderSeat(seatEl, player, cardCount, isTurn, cards) {
+  function renderSeat(seatEl, player, cardCount, isTurn, isWinner) {
     if (!player) { seatEl.innerHTML = ''; seatEl.style.display = 'none'; return; }
-    seatEl.style.display = '';
+    seatEl.style.display = 'block';
     const initial = (player.name || '?').charAt(0).toUpperCase();
 
-    // Build mini card fan
-    const fanCount = Math.min(cardCount, 8);
-    const fanCards = Array(fanCount).fill('').map((_, i) => {
-      const angle = (i - (fanCount - 1) / 2) * 8;
-      const tx = (i - (fanCount - 1) / 2) * 6;
-      return `<div class="uno-fan-card" style="transform:rotate(${angle}deg) translateX(${tx}px)"></div>`;
-    }).join('');
+    // Build mini card fan or show winner
+    let fanCards = '';
+    if (isWinner) {
+      fanCards = `<div style="color: gold; font-weight: bold; font-size: 12px; text-transform: uppercase;">Won</div>`;
+    } else {
+      const fanCount = Math.min(cardCount, 8);
+      fanCards = Array(fanCount).fill('').map((_, i) => {
+        const angle = (i - (fanCount - 1) / 2) * 8;
+        const tx = (i - (fanCount - 1) / 2) * 6;
+        return `<div class="uno-fan-card" style="transform:rotate(${angle}deg) translateX(${tx}px)"></div>`;
+      }).join('');
+    }
 
     seatEl.innerHTML = `
       <div class="uno-seat-inner${isTurn ? ' is-turn' : ''}">
         <div class="uno-seat-avatar">${initial}</div>
         <div class="uno-seat-name">${player.name || 'Player'}</div>
         <div class="uno-seat-fan">${fanCards}</div>
-        <div class="uno-seat-count">${cardCount}</div>
+        ${!isWinner ? `<div class="uno-seat-count">${cardCount}</div>` : ''}
       </div>
     `;
   }
@@ -226,7 +231,8 @@ export function UnoGameView(data) {
       const p = players[pid];
       const count = (uno.hands?.[pid] || []).length;
       const isTurn = uno.currentTurn === pid;
-      renderSeat(seat, p, count, isTurn);
+      const isWinner = uno.winners && uno.winners.includes(pid);
+      renderSeat(seat, p, count, isTurn, isWinner);
     });
 
     // --- Direction ring ---
@@ -304,9 +310,9 @@ export function UnoGameView(data) {
     drawBtn.classList.toggle('can-draw', isMyTurn && !uno.pendingWild);
 
     // --- Winner ---
-    if (uno.winner) {
+    if (uno.gameOver || (uno.winners && uno.winners.length > 0 && turnOrder.length <= 2)) {
       setTimeout(() => {
-        navigate('/uno-game-over', { code, room, winner: uno.winner, isHost });
+        navigate('/uno-game-over', { code, room, winner: uno.winners[0], isHost });
       }, 1500);
     }
   }

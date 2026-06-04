@@ -100,11 +100,15 @@ export function getCardEffect(card) {
 }
 
 // Advance to the next player
-export function getNextPlayer(playerIds, currentIndex, direction, skip = 0) {
+export function getNextPlayer(playerIds, currentIndex, direction, skip = 0, winners = []) {
   let idx = currentIndex;
-  // Move forward 1 + skip count
-  for (let i = 0; i <= skip; i++) {
+  let skipped = 0;
+  // Move forward until we find a player who hasn't won, doing this (1 + skip) times
+  while (skipped <= skip) {
     idx = (idx + direction + playerIds.length) % playerIds.length;
+    if (!winners.includes(playerIds[idx])) {
+      skipped++;
+    }
   }
   return idx;
 }
@@ -160,7 +164,8 @@ export function serializeState(state) {
     pendingWild: state.pendingWild || false,
     turnOrder: state.turnOrder,
     calledUno: state.calledUno || {},
-    winner: state.winner || null,
+    winners: state.winners || [],
+    gameOver: state.gameOver || false,
     lastAction: state.lastAction || null,
   };
 }

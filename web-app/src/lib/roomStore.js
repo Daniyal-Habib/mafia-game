@@ -206,7 +206,8 @@ export async function hostStartUnoGame(code, room, cardsPerHand = 7) {
     pendingWild: false,
     turnOrder,
     calledUno: {},
-    winner: null,
+    winners: [],
+    gameOver: false,
     lastAction: null,
   });
 
@@ -254,19 +255,19 @@ export async function unoPlayCard(code, cardId) {
   let pendingWild = false;
   let drawUpdates = {};
   let lastAction = { type: effect, player: deviceId, card };
-
+  const winners = uno.winners || [];
   if (effect === 'reverse') {
     direction *= -1;
     if (turnOrder.length === 2) {
       // In 2-player, reverse acts as skip
-      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1, winners);
     } else {
-      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+      nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0, winners);
     }
   } else if (effect === 'skip') {
-    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1, winners);
   } else if (effect === 'draw2') {
-    const skippedIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    const skippedIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0, winners);
     const skippedPlayer = turnOrder[skippedIndex];
     // Give 2 cards to next player
     const drawPile = [...(uno.drawPile || [])];
@@ -276,7 +277,7 @@ export async function unoPlayCard(code, cardId) {
     }
     drawUpdates[`hands/${skippedPlayer}`] = targetHand;
     drawUpdates['drawPile'] = drawPile;
-    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1, winners);
     lastAction.target = skippedPlayer;
   } else if (effect === 'wild') {
     pendingWild = true;
@@ -285,28 +286,32 @@ export async function unoPlayCard(code, cardId) {
     pendingWild = true;
     // Color + draw will happen in chooseColor
   } else {
-    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0, winners);
   }
 
   // Check for win
-  let winner = null;
-  if (newHand.length === 0) {
-    winner = deviceId;
+  let gameOver = uno.gameOver || false;
+  if (newHand.length === 0 && !winners.includes(deviceId)) {
+    winners.push(deviceId);
+    if (turnOrder.length - winners.length <= 1) {
+      gameOver = true;
+    }
   }
 
   const updates = {
     [`hands/${deviceId}`]: newHand,
     discardPile: newDiscard,
     direction,
+    currentTurnIndex: nextTurnIndex,
+    currentTurn: turnOrder[nextTurnIndex],
     activeColor,
     pendingWild,
+    winners,
+    gameOver,
     lastAction,
     ...drawUpdates,
   };
 
-  if (winner) {
-    updates.winner = winner;
-  }
 
   if (!pendingWild) {
     updates.currentTurnIndex = nextTurnIndex;
@@ -336,8 +341,9 @@ export async function unoChooseColor(code, color) {
     pendingWild: false,
   };
 
+  const winners = uno.winners || [];
   if (effect === 'wild_draw4') {
-    const targetIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    const targetIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0, winners);
     const targetPlayer = turnOrder[targetIndex];
     const drawPile = [...(uno.drawPile || [])];
     const targetHand = [...(uno.hands[targetPlayer] || [])];
@@ -346,17 +352,23 @@ export async function unoChooseColor(code, color) {
     }
     updates[`hands/${targetPlayer}`] = targetHand;
     updates.drawPile = drawPile;
-    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1);
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 1, winners);
     updates.lastAction = { type: 'wild_draw4', player: deviceId, target: targetPlayer, color };
   } else {
-    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0);
+    nextTurnIndex = getNextPlayer(turnOrder, nextTurnIndex, direction, 0, winners);
     updates.lastAction = { type: 'wild', player: deviceId, color };
   }
 
   // Check if player already won (hand empty from the wild play)
+  let gameOver = uno.gameOver || false;
   const myHand = uno.hands[deviceId] || [];
-  if (myHand.length === 0) {
-    updates.winner = deviceId;
+  if (myHand.length === 0 && !winners.includes(deviceId)) {
+    winners.push(deviceId);
+    updates.winners = winners;
+    if (turnOrder.length - winners.length <= 1) {
+      gameOver = true;
+      updates.gameOver = true;
+    }
   }
 
   updates.currentTurnIndex = nextTurnIndex;
@@ -396,7 +408,8 @@ export async function unoDrawCard(code) {
 
     // After drawing, advance to next turn
     const turnOrder = uno.turnOrder;
-    const nextIndex = getNextPlayer(turnOrder, uno.currentTurnIndex, uno.direction, 0);
+    const winners = uno.winners || [];
+    const nextIndex = getNextPlayer(turnOrder, uno.currentTurnIndex, uno.direction, 0, winners);
 
     await update(ref(db, `rooms/${code}/uno`), {
       drawPile,
